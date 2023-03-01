@@ -397,6 +397,7 @@ class Hand:
             # Display current status
 
             show_overview(self.table, header_1, header_2, board)
+            turn_outcome = ''
             if player.dealt_in:
                 if player.human:
                     turn_outcome = player.turn(initial_bet, self)
