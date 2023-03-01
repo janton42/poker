@@ -6,40 +6,39 @@ names = ['John', 'Nacho', 'Li Bao', 'Sally', 'Shaniqua', 'Ivan', 'Mkembe', 'Liu 
 
 hierarchy = {'High Card': 1, 'Pair': 2, 'Two Pair': 3, 'Three of a Kind': 4, 'Straight': 5, 'Flush': 6, 'Full House': 7,
              'Four of a Kind': 8, 'Straight Flush': 9, 'Royal Flush': 10}
-
+print('\n' * 50)
+print('Welcome to Texas Hold\'em\n')
+print('*' * 50)
 player_name = input('Enter your name: ')
 
 
 def main_game_loop(current_table: object):
     choice = int(input('What would you like to do?\n'
                        '(1) play a hand\n'
-                       '(2) change tables (keep your current chip count, reset AI players, seating and dealer '
-                       'position)\n'
-                       '(3) replenish chips (keep your current seating, AI players, and dealer position, reset your '
-                       'chip count to initial value)\n'
-                       '(4) reset chips (keep your current seating, AI players, and dealer posotion, '
-                       'reset all players\' chip count to inital value\n'
-                       '(5) reset everything (keep only your name, reset AI players, seating, dealer position, and all'
-                       'players\' chip count to initial value)\n'
-                       '(6) quit the game\n\nEnter your choice:\t'))
+                       '(2) reset \n'
+                       '(3) quit the game\n\n\n\n\nEnter your choice:\t'))
     if choice == 1:
         hand = Hand(current_table)
         hand.play()
         main_game_loop(current_table)
     elif choice == 2:
-        # TODO: Change tables but keep chips
-        print('Changing tables...')
-    elif choice == 3:
-        # TODO: Replenish chips
-        print('Replenishing chips...')
-    elif choice == 4:
-        # TODO: Reset chips
-        print('Resetting chips...')
-    elif choice == 5:
-        new_table = make_new_table()
+        # TODO: Give sub options on what to reset (chips only, AI players, human player name, everythin)
+        reset = int(input('What would you like to reset?\n'
+                  '(1) your chips\n'
+                  '(2) the AI players (change tables)\n'
+                  '(3) everything\n\n\n\n\nenter your choice:\t'))
+        if reset == 1:
+            # TODO: Reset player chips
+            pass
+        elif reset == 2:
+            # TODO: Reset AI players
+            pass
+        elif reset == 3:
+            # TODO: Start over
+            pass
 
-        main_game_loop(new_table)
-    elif choice == 6:
+        print('Reseting...')
+    elif choice == 3:
         print('Quitting game...')
         print('обсось')
     else:
@@ -273,8 +272,8 @@ class Hand:
                      {'Suit': 'Clubs', 'Value': '7', 'Rank': 7}, {'Suit': 'Clubs', 'Value': '6', 'Rank': 6},
                      {'Suit': 'Clubs', 'Value': '5', 'Rank': 5}, {'Suit': 'Clubs', 'Value': '4', 'Rank': 4},
                      {'Suit': 'Clubs', 'Value': '3', 'Rank': 3}, {'Suit': 'Clubs', 'Value': '2', 'Rank': 2}]
-        self.round = 0
         self.pot = 0
+        self.bet_to_call = 0
         self.table = table
         self.players = self.table.seating
         self.dealer = ''
@@ -292,6 +291,7 @@ class Hand:
 
     def deal_pocket(self):
         print('Dealing Pocket Cards')
+        # Refactor using sample()
         table_rounds = 0
         while table_rounds < 2:
             for player in self.players:
@@ -397,7 +397,7 @@ class Hand:
             # Display current status
 
             show_overview(self.table, header_1, header_2, board)
-            turn_outcome = ''
+            turn_outcome = ['i', 'out of the hand']
             if player.dealt_in:
                 if player.human:
                     turn_outcome = player.turn(initial_bet, self)
@@ -427,7 +427,7 @@ class Hand:
             print('\n' * 6)
             time.sleep(5)
 
-    def determine_winner(self):
+    def determine_winner(self): # TODO: Make this more sophisticated
         if self.winner != '':
             winner = self.winner
         else:
@@ -531,6 +531,7 @@ class Player:
         self.chips -= amount
         self.last_bet = amount
         current_hand.pot += amount
+        current_hand.bet_to_call = amount
         return amount
 
     def fold(self):
@@ -551,18 +552,22 @@ class Player:
                          '(5) Call\n\n'
                          'Enter your choice: ')
         if decision == '1':
+            decision = 'fold'
             amount = 0
             self.fold()
         elif decision == '2':
+            decision = 'check'
             amount = 0
         elif decision == '3':
             amount = int(input('How much would you like to bet? '))
             decision = 'bet'
             self.bet(amount, current_hand)
         elif decision == '4':
+            decision = 'raise'
             amount = int(input('How much would you like to raise? '))
             self.bet(amount, current_hand)
         elif decision == '5':
+            decision = 'call'
             amount = current_bet - self.last_bet
             self.bet(amount, current_hand)
         turn_action = (decision, amount)
@@ -600,7 +605,12 @@ class AIPlayer(Player):
             amount = 0
         elif decision == '3':  # Bet
             decision = 'bet'
-            amount = random.randint(1, self.chips)
+            if self.chips == 0:
+                amount = 0
+            elif self.chips < 10:
+                amount = 1
+            else:
+                amount = random.randint(1, 10)
             self.bet(amount, current_hand)
         elif decision == '4':  # Call
             decision = 'call'
