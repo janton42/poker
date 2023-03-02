@@ -24,9 +24,9 @@ def main_game_loop(current_table: object):
     elif choice == 2:
         # TODO: Give sub options on what to reset (chips only, AI players, human player name, everythin)
         reset = int(input('What would you like to reset?\n'
-                  '(1) your chips\n'
-                  '(2) the AI players (change tables)\n'
-                  '(3) everything\n\n\n\n\nenter your choice:\t'))
+                          '(1) your chips\n'
+                          '(2) the AI players (change tables)\n'
+                          '(3) everything\n\n\n\n\nenter your choice:\t'))
         if reset == 1:
             # TODO: Reset player chips
             pass
@@ -62,7 +62,7 @@ def make_new_table():
         new_table.add_player(player, 'bot')
     new_table.make_seating()
     new_table.set_blind_positions()
-    new_table.set_action_position()
+    new_table.set_blind_action_position()
     new_table.introduce()
     return new_table
 
@@ -172,11 +172,17 @@ class Table:
             self.small_blind_position = self.dealer_position + 1
             self.big_blind_position = self.dealer_position + 2
 
-    def set_action_position(self):
+    def set_blind_action_position(self):
         if self.big_blind_position + 1 > len(self.seating) - 1:
             self.action_position = 0
         else:
             self.action_position = self.big_blind_position + 1
+
+    def set_action_position(self):
+        if self.dealer_position + 1 > len(self.seating) - 1:
+            self.action_position = 0
+        else:
+            self.action_position = self.dealer_position + 1
 
     def show_seating(self):
         for player in self.seating:
@@ -186,8 +192,8 @@ class Table:
             # the player is an AI
             if player.dealt_in:
                 if len(player.hand) > 0:
-                    if player not in self.table['bots']:  # TODO: Update to check the player.human attribute
-                        player_info += f'\t {shorthand(player.hand)}'
+                    if player.human:
+                        player_info += f'\t {shorthand(player.hand)}' + '(you)'
                     else:
                         if self.showdown:
                             player_info += f'\t {shorthand(player.hand)}'
@@ -195,11 +201,14 @@ class Table:
                             player_info += f'\t ["***", "***"]'
                 else:
                     player_info += f'\t ["No Cards"]'
+                if self.action_position == self.seating.index(player):
+                    player_info += ' (Action)'
             else:
                 player_info += f'\t ["Folded"]'
 
             # Show the dealer, small blind, and big blind positions
-            if self.dealer_position == self.seating.index(player) and self.big_blind_position == self.seating.index(player):
+            if self.dealer_position == self.seating.index(player) and self.big_blind_position == self.seating.index(
+                    player):
                 print(f'{player_info} (Dealer, Big Blind)')
             elif self.dealer_position == self.seating.index(player):
                 print(f'{player_info} (Dealer)')
@@ -224,11 +233,11 @@ class Table:
         # heading_1
         line_1 = f"This is a {self.name} table."
         line_2 = f"The blinds are {self.small_blind} and {self.big_blind}."
-        line_3 = f'Dealer pos: {self.dealer_position}'
+        line_3 = f''
         header_1 = [line_1, line_2, line_3]
         # heading_2
-        line_1 = f'Small Blind pos: {self.small_blind_position}'
-        line_2 = f'Big Blind pos: {self.big_blind_position}'
+        line_1 = f''
+        line_2 = f''
         header_2 = [line_1, line_2]
         # board
         line_1 = f'The board is:'
@@ -281,6 +290,7 @@ class Hand:
         self.big_blind = ''
         self.action = ''
         self.winner = ''
+        self.rounds_bet = []
 
         # Clear collect cards from players, clear the table, and shuffle deck
         self.table.reset_board()
@@ -288,6 +298,7 @@ class Hand:
             player.hand.clear()
         random.shuffle(self.deck)
         self.table.showdown = False
+        self.table.set_blind_action_position()
 
     def deal_pocket(self):
         print('Dealing Pocket Cards')
@@ -305,10 +316,10 @@ class Hand:
             # Set blind player names and have them ante up with their blind amounts.
             if self.players.index(player) == self.table.small_blind_position:
                 self.small_blind = player.name
-                player.bet(self.table.small_blind, self)
+                player.bet(self.table.small_blind, self, 'blind')
             elif self.players.index(player) == self.table.big_blind_position:
                 self.big_blind = player.name
-                player.bet(self.table.big_blind, self)
+                player.bet(self.table.big_blind, self, 'blind')
             elif self.players.index(player) == self.table.action_position:
                 self.action = player.name
 
@@ -318,11 +329,12 @@ class Hand:
         header_1 = [line_1, line_2, line_3]
         # heading_2
         line_1 = f'Pot: {self.pot}'
-        line_2 = f''
+        line_2 = f'Bet to call: {self.bet_to_call}'
         header_2 = [line_1, line_2]
         # board
         line_1 = f'The board is:'
-        if len(self.table.board['Flop']) == 0 and len(self.table.board['Turn']) == 0 and len(self.table.board['River']) == 0:
+        if len(self.table.board['Flop']) == 0 and len(self.table.board['Turn']) == 0 and len(
+                self.table.board['River']) == 0:
             line_2 = f'There are no cards on the table.'
         else:
             line_2 = f'Ya done fucked up; reset the game, jackass!'
@@ -333,28 +345,22 @@ class Hand:
         time.sleep(5)
 
     def deal_flop(self):
-        self.round = 1
-        print('Dealing Flop')
-        print('Burning one, turning three')
         table_rounds = 0
+        self.bet_to_call = 0
         while table_rounds < 4:
             self.table.board['Flop'].append(self.deck.pop())
             table_rounds += 1
 
     def deal_turn(self):
-        self.round = 2
-        print('Dealing Turn')
-        print('Burning one, turning one')
         table_rounds = 0
+        self.bet_to_call = 0
         while table_rounds < 2:
             self.table.board['Turn'].append(self.deck.pop())
             table_rounds += 1
 
     def deal_river(self):
-        self.round = 3
-        print('Dealing River')
-        print('Burning one, turning one')
         table_rounds = 0
+        self.bet_to_call = 0
         while table_rounds < 2:
             self.table.board['River'].append(self.deck.pop())
             table_rounds += 1
@@ -366,18 +372,33 @@ class Hand:
                 active_players += 1
         return active_players
 
-    def betting_round(self, initial_bet: int, round_title: str):
+    def betting_round(self, initial_bet: int, round_title: str, last_bet_pos: int):
+        no_bet_no_raise = True
+        # If not the pre-flop round, action is to the left of dealer
+        if round_title != 'pre-Flop':
+            self.table.set_action_position()
+        # else:
+        #     self.table.set_blind_action_position()
         betting_action = self.table.action_position
+
         bets = 0
         while True:
-            if bets == len(self.players):
+            if round_title in self.rounds_bet:
+                if bets == last_bet_pos - 1:
+                    # if not no_bet_no_raise:
+                    #     self.betting_round(self.bet_to_call, round_title, betting_action)
+                    break
+            elif bets == len(self.players):
+                if not no_bet_no_raise:
+                    self.betting_round(self.bet_to_call, round_title, betting_action)
                 break
             bets += 1
             player = self.players[betting_action]
+            self.table.action_position = betting_action
             self.action = player.name
-            line_1 = f"This is the {round_title} betting round."
-            line_2 = f"The blinds are {self.table.small_blind} and {self.table.big_blind}."
-            line_3 = f"Bets: {bets} of {len(self.players)}"
+            line_1 = f'This is the {round_title} betting round.'
+            line_2 = f'No bet, no raise: {no_bet_no_raise}'
+            line_3 = f"Bet to call: {self.bet_to_call}"
             header_1 = [line_1, line_2, line_3]
             # heading_2
             line_1 = f'Pot: {self.pot}'
@@ -391,7 +412,8 @@ class Hand:
             elif round_title == 'turn':
                 cards = shorthand(self.table.board["Flop"][1:] + self.table.board["Turn"][1:])
             elif round_title == 'river':
-                cards = shorthand(self.table.board["Flop"][1:] + self.table.board["Turn"][1:] + self.table.board["River"][1:])
+                cards = shorthand(
+                    self.table.board["Flop"][1:] + self.table.board["Turn"][1:] + self.table.board["River"][1:])
             line_2 = f'{cards}'
             board = [line_1, line_2]
             # Display current status
@@ -400,16 +422,20 @@ class Hand:
             turn_outcome = ['i', 'out of the hand']
             if player.dealt_in:
                 if player.human:
-                    turn_outcome = player.turn(initial_bet, self)
+                    turn_outcome = player.turn(self.bet_to_call, self)
                 else:
-                    turn_outcome = player.take_turn(initial_bet, self)
+                    turn_outcome = player.take_turn(self.bet_to_call, self)
 
-            betting_action += 1
-            if betting_action == len(self.players):
+            if betting_action + 1 == len(self.players):
                 betting_action = 0
-            line_1 = f"This is the {round_title} betting round."
-            line_2 = f"The blinds are {self.table.small_blind} and {self.table.big_blind}."
-            line_3 = f"Bets: {bets} of {len(self.players)}"
+            else:
+                betting_action += 1
+            if turn_outcome[0] == 'bet' or turn_outcome == 'raise':
+                no_bet_no_raise = False
+            # self.table.action_position = betting_action
+            line_1 = f'This is the {round_title} betting round.'
+            line_2 = f'No bet, no raise: {no_bet_no_raise}'
+            line_3 = f"New amount to call: {self.bet_to_call}"
             header_1 = [line_1, line_2, line_3]
             # heading_2
             line_1 = f'Pot: {self.pot}'
@@ -424,10 +450,12 @@ class Hand:
             board = [line_1, line_2]
             # Display current status
             show_overview(self.table, header_1, header_2, board)
+
+            self.table.action_position = betting_action
             print('\n' * 6)
             time.sleep(5)
 
-    def determine_winner(self): # TODO: Make this more sophisticated
+    def determine_winner(self):  # TODO: Make this more sophisticated
         if self.winner != '':
             winner = self.winner
         else:
@@ -453,7 +481,8 @@ class Hand:
         header_2 = [line_1, line_2]
         # board
         line_1 = f'The board is:'
-        if len(self.table.board['Flop']) == 0 and len(self.table.board['Turn']) == 0 and len(self.table.board['River']) == 0:
+        if len(self.table.board['Flop']) == 0 and len(self.table.board['Turn']) == 0 and len(
+                self.table.board['River']) == 0:
             line_2 = f'There are no cards on the table.'
         else:
             line_2 = f'{shorthand(self.table.board["Flop"][1:] + self.table.board["Turn"][1:] + self.table.board["River"][1:])}'
@@ -475,15 +504,15 @@ class Hand:
         # Blinds are added to the pot
         self.deal_pocket()
         # First betting round
-        self.betting_round(self.table.big_blind, 'pre-Flop')
+        self.betting_round(self.table.big_blind, 'pre-Flop', self.table.big_blind_position)
         self.reset_last_bets()
         self.deal_flop()
-        self.betting_round(0, 'flop')
+        self.betting_round(0, 'flop', self.table.action_position)
         self.reset_last_bets()
         self.deal_turn()
-        self.betting_round(0, 'turn')
+        self.betting_round(0, 'turn', self.table.action_position)
         self.deal_river()
-        self.betting_round(0, 'river')
+        self.betting_round(0, 'river', self.table.action_position)
         self.declare_winner()
 
 
@@ -527,11 +556,12 @@ class Player:
             print(f'\tI have {high_card[0].split(" ")[0]} high')
         print(shorthand(self.hand))
 
-    def bet(self, amount: int, current_hand: object):
+    def bet(self, amount: int, current_hand: object, bet_type: str):
         self.chips -= amount
         self.last_bet = amount
         current_hand.pot += amount
-        current_hand.bet_to_call = amount
+        if bet_type != 'call':
+            current_hand.bet_to_call = amount
         return amount
 
     def fold(self):
@@ -561,15 +591,15 @@ class Player:
         elif decision == '3':
             amount = int(input('How much would you like to bet? '))
             decision = 'bet'
-            self.bet(amount, current_hand)
+            self.bet(amount, current_hand, decision)
         elif decision == '4':
             decision = 'raise'
             amount = int(input('How much would you like to raise? '))
-            self.bet(amount, current_hand)
+            self.bet(amount, current_hand, decision)
         elif decision == '5':
             decision = 'call'
             amount = current_bet - self.last_bet
-            self.bet(amount, current_hand)
+            self.bet(amount, current_hand, decision)
         turn_action = (decision, amount)
         print(f'{self.name} says:{decision} {amount}')
 
@@ -581,19 +611,31 @@ class AIPlayer(Player):
         super().__init__(name)
         self.human = False
 
-
     def think(self):  # TODO: Make this more sophisticated
         contemplation = random.randint(3, 10)
         print(f'{self.name} is only a machine, but it is thinking...')
         print('\n' * 5)
         time.sleep(contemplation)
 
+        return contemplation
+
     def take_turn(self, current_bet: int, current_hand: object):
         # Think it over, consider options, calculate odds
-        self.think()
+        winning_odds = self.think()
         amount = 0
         # Make the decision # TODO: Make this more sophisticated
-        decision = '3'
+        if current_bet == 0:
+            decision = '2' # Check
+        elif current_bet > self.chips * .3:
+            decision = '1' # Fold
+        elif winning_odds > 11:
+            decision = '5' # Raise
+        elif winning_odds > 11:
+            decision = '3' # Bet
+        elif winning_odds > 6:
+            decision = '4' # Call
+        else:
+            decision = '4' # Call
 
         # Set the amount based on decision
         if decision == '1':  # Fold
@@ -611,18 +653,23 @@ class AIPlayer(Player):
                 amount = 1
             else:
                 amount = random.randint(1, 10)
-            self.bet(amount, current_hand)
+            self.bet(amount, current_hand, decision)
         elif decision == '4':  # Call
             decision = 'call'
-            amount = random.randint(self.chips - current_bet, self.chips)
-            self.bet(amount, current_hand)
+
+            amount = current_bet - self.last_bet
+            self.bet(amount, current_hand, decision)
         elif decision == '5':  # Raise
             decision = 'raise'
             if current_bet > self.chips:
                 amount = self.chips
+            elif self.chips == 0:
+                amount = 0
+            elif self.chips < 10:
+                amount = 1
             else:
-                amount = current_bet + random.randint(1, self.chips - current_bet)
-            self.bet(amount, current_hand)
+                amount = random.randint(1, 10)
+            self.bet(amount, current_hand, decision)
         turn_action = (decision, amount)
         # Return the decision and amount
         return turn_action
