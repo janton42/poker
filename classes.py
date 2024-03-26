@@ -1,4 +1,7 @@
 import random
+import time
+
+from funcs import shorthand, make_pairs, name_winner, shuffle
 
 class Table:
     def __init__(self):
@@ -97,7 +100,7 @@ class Table:
     def remove_player(self, player: object):
         self.table['bots'].remove(player)
 
-    def show_overview(table, header_1, header_2, board):
+    def show_overview(self, header_1, header_2, board):
         print('\n' * 50)
         print(f'*' * 50)
         print(header_1[0])
@@ -107,8 +110,8 @@ class Table:
         print(header_2[0])
         print(header_2[1])
         print(f'*' * 50)
-        table.show_seating()
-        print('*\n' * (10 - len(table.seating)))
+        self.show_seating()
+        print('*\n' * (10 - len(self.seating)))
         print(f'*' * 50)
         print(board[0])
         print(board[1])
@@ -187,7 +190,7 @@ class Hand:
         self.table.showdown = False
         self.table.set_blind_action_position()
 
-    def rank_cards(cards: list):
+    def rank_cards(self, cards: list):
         return sorted(cards, key=lambda card: card['Rank'], reverse=True)
 
     def deal_pocket(self):
@@ -230,7 +233,7 @@ class Hand:
             line_2 = f'Ya done fucked up; reset the game, jackass!'
         board = [line_1, line_2]
         # Display current status
-        show_overview(self.table, header_1, header_2, board)
+        self.table.show_overview(header_1, header_2, board)
         print('\n' * 6)
         time.sleep(5)
 
@@ -308,7 +311,7 @@ class Hand:
             board = [line_1, line_2]
             # Display current status
 
-            show_overview(self.table, header_1, header_2, board)
+            self.table.show_overview(header_1, header_2, board)
             turn_outcome = ['i', 'out of the hand']
             if player.dealt_in:
                 if player.human:
@@ -339,7 +342,7 @@ class Hand:
             line_2 = f'{cards}'
             board = [line_1, line_2]
             # Display current status
-            show_overview(self.table, header_1, header_2, board)
+            self.table.show_overview(header_1, header_2, board)
 
             self.table.action_position = betting_action
             print('\n' * 6)
@@ -378,7 +381,7 @@ class Hand:
             line_2 = f'{shorthand(self.table.board["Flop"][1:] + self.table.board["Turn"][1:] + self.table.board["River"][1:])}'
         board = [line_1, line_2]
         # Display current status
-        show_overview(self.table, header_1, header_2, board)
+        self.table.show_overview(header_1, header_2, board)
         self.table.rotate_dealer()
         self.table.set_blind_positions()
         for player in self.players:
@@ -503,7 +506,7 @@ class AIPlayer(Player):
         self.human = False
 
     def think(self):  # TODO: Make this more sophisticated
-        contemplation = random.randint(3, 10)
+        contemplation = random.randint(1,2)
         print(f'{self.name} is only a machine, but it is thinking...')
         print('\n' * 5)
         time.sleep(contemplation)

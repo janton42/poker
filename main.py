@@ -1,9 +1,36 @@
 import time
+import random
 
-from funcs import make_new_table, shorthand, make_pairs, \
-name_winner, shuffle, make_ai_players
+from classes import Table, Hand, Player, AIPlayer
+from vars import names
 
-from classes import Hand
+
+def make_ai_players(num_players: int):
+    ai_players = []
+    name_list = random.sample(names, num_players)
+    for name in name_list:
+        ai_players.append(AIPlayer(name))
+    return ai_players
+
+
+def make_new_table(player_name):
+    new_table = Table()
+    # Make human player instance
+    human = Player(player_name)
+    # Add human player to table
+    new_table.add_player(human, 'human')
+    # Get number of AI players from user
+    ai_num = random.randrange(1, 9)
+    # Make AI player instances
+    ai_player_list = make_ai_players(ai_num)
+    # Add AI players to table
+    for player in ai_player_list:
+        new_table.add_player(player, 'bot')
+    new_table.make_seating()
+    new_table.set_blind_positions()
+    new_table.set_blind_action_position()
+    new_table.introduce()
+    return new_table
 
 def main_game_loop(current_table: object):
     choice = int(input('What would you like to do?\n'
