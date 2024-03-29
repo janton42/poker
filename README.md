@@ -1,6 +1,6 @@
 # Poker
 
-A text based simple game of Texas Holdem against ai players.
+A text based simple game of Texas Holdem against AI players.
 
 ## Installation
 
